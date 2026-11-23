@@ -119,55 +119,42 @@
       `<tr><th scope="row">${monthLabel(ym)}</th>${series.map((s) => `<td>${(s.values[i] / 1e6).toFixed(1)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
   }
 
-  let mapDrawn = false;
   function renderMap() {
     const all = filt('plant');
     const byPlant = [...sumBy(all, (r) => r.plant, (r) => r.net)].map(([plant, amt]) => ({
       plant, amt, customers: new Set(all.filter((r) => r.plant === plant).map((r) => r.cust)).size }));
     const max = Math.max(1, ...byPlant.map((d) => d.amt));
-    const W = G.MAP_W, H = G.MAP_H, vb = `0 0 ${W} ${H}`;
-    const land = css('--land'), stroke = css('--landStroke'), edge = css('--landEdge'), side = css('--landSide');
     const eq = G.project(0, 33.9).y;
-    const pts = byPlant.map((d) => {
-      const dep = G.DEPOTS[d.plant]; if (!dep) return null;
-      const p = G.project(dep.lat, dep.lon);
-      return { ...d, dep, x: p.x, y: p.y, col: css(d.plant === 'NBO' ? '--nbo' : '--msa'), k: Math.sqrt(d.amt / max) };
-    }).filter(Boolean);
-
-    // top surface: land, pulsing heat clipped to the border, depot ripples
-    const defs = pts.map((d) => `<radialGradient id="hg-${d.plant}"><stop offset="0" stop-color="${d.col}" stop-opacity=".95"/><stop offset=".45" stop-color="${d.col}" stop-opacity=".45"/><stop offset="1" stop-color="${d.col}" stop-opacity="0"/></radialGradient>`).join('');
-    const heat = pts.map((d, i) => `<circle class="heat${i % 2 ? ' b' : ''}" cx="${d.x}" cy="${d.y}" r="${150 + 240 * d.k}" fill="url(#hg-${d.plant})"/>`).join('');
-    const ripples = pts.map((d, i) => `<circle class="ripple${i % 2 ? ' b' : ''}" cx="${d.x}" cy="${d.y}" r="${90 + 70 * d.k}" stroke="${d.col}" stroke-width="5"/>`).join('');
-    const towns = G.TOWNS.map((t) => { const q = G.project(t.lat, t.lon);
-      return `<circle class="town" cx="${q.x}" cy="${q.y}" r="5"/><text x="${q.x + 10}" y="${q.y + 7}" font-size="20">${t.name}</text>`; }).join('');
-    const top = `<div class="layer top"><svg viewBox="${vb}" role="img" aria-label="Map of Kenya with depot sales heat">
-      <defs>${defs}<clipPath id="kclip"><path d="${G.KENYA_PATH}"/></clipPath></defs>
-      <path d="${G.KENYA_PATH}" fill="${land}"/>
-      <g clip-path="url(#kclip)">${heat}</g>
-      <path d="${G.KENYA_PATH}" fill="none" stroke="${stroke}" stroke-width="3"/>
-      <line x1="0" x2="${W}" y1="${eq}" y2="${eq}" stroke="${stroke}" stroke-width="1.5" stroke-dasharray="8 8" opacity=".6"/>
-      <text x="${W - 6}" y="${eq - 8}" font-size="20" text-anchor="end">Equator</text>
-      ${towns}${ripples}</svg></div>`;
-
-    // depot columns stand up from the plane and double as the filter buttons
-    const pillars = pts.map((d) => {
-      const on = f.plant === d.plant;
-      return `<div class="pillar" style="left:${(d.x / W) * 100}%;top:${(d.y / H) * 100}%">
-        <button type="button" class="depot${on ? ' on' : ''}" data-p="${d.plant}" aria-pressed="${on}" style="--c:${d.col}"
-          aria-label="${d.dep.name} depot, KES ${fmtM(d.amt)}, ${d.customers} customers. ${on ? 'Selected, press to clear filter' : 'Press to filter'}">
-          <span class="cap"><b>KES ${fmtM(d.amt)}</b><small>${d.dep.name} \u00b7 ${d.customers} cust.</small></span>
-        </button></div>`;
-    }).join('');
-
-    const box = $('map');
-    box.innerHTML = `<div class="map3d"><div class="scene">${top}${pillars}</div></div>`;
-    mapDrawn = true;
-    box.querySelectorAll('.depot').forEach((b) => {
-      b.onclick = () => {
-        const p = b.dataset.p; f.plant = f.plant === p ? 'ALL' : p; render();
-        const n = document.querySelector(`.depot[data-p="${p}"]`); if (n) n.focus();
-      };
+    const svg = el('svg', { viewBox: `0 0 ${G.MAP_W} ${G.MAP_H}`, style: 'width:100%;max-width:380px' });
+    svg.appendChild(el('path', { d: G.KENYA_PATH, fill: css('--land'), stroke: css('--landStroke'), 'stroke-width': 3 }));
+    svg.appendChild(el('line', { x1: 0, x2: G.MAP_W, y1: eq, y2: eq, stroke: css('--sub'), 'stroke-width': 1.5, 'stroke-dasharray': '8 8', opacity: 0.5 }));
+    svg.appendChild(el('text', { x: G.MAP_W - 6, y: eq - 8, 'font-size': 20, 'text-anchor': 'end', text: 'Equator' }));
+    G.TOWNS.forEach((t) => {
+      const { x, y } = G.project(t.lat, t.lon);
+      svg.appendChild(el('circle', { cx: x, cy: y, r: 5, fill: css('--sub'), opacity: 0.7 }));
+      svg.appendChild(el('text', { x: x + 10, y: y + 7, 'font-size': 20, text: t.name }));
     });
+    byPlant.forEach((d, i) => {
+      const dep = G.DEPOTS[d.plant]; if (!dep) return;
+      const { x, y } = G.project(dep.lat, dep.lon);
+      const r = 22 + 40 * Math.sqrt(d.amt / max), on = f.plant === d.plant;
+      const col = css(d.plant === 'NBO' ? '--nbo' : '--msa');
+      const g = el('g', { class: 'depot', role: 'button', tabindex: 0, 'aria-pressed': on,
+        'aria-label': `${dep.name} depot, KES ${fmtM(d.amt)}, ${d.customers} customers. ${on ? 'Selected, press to clear filter' : 'Press to filter'}` }, [
+        el('circle', { cx: x, cy: y, r, fill: col, opacity: 0.35 }),
+        el('circle', { class: 'pulse', cx: x, cy: y, r, stroke: col, 'stroke-width': 4, style: `--s0:${(7 / r).toFixed(3)};animation-delay:${(-i * 1.2).toFixed(1)}s` }),
+        el('circle', { cx: x, cy: y, r, fill: 'none', stroke: col, 'stroke-width': on ? 7 : 3 }),
+        el('circle', { cx: x, cy: y, r: 7, fill: col }),
+        el('text', { x: x - r - 10, y: y - 4, 'font-size': 30, 'font-weight': 'bold', 'text-anchor': 'end', style: `fill:${css('--text')}`, text: dep.name }),
+        el('text', { x: x - r - 10, y: y + 30, 'font-size': 26, 'text-anchor': 'end', text: `KES ${fmtM(d.amt)} \u00b7 ${d.customers} cust.` }),
+      ]);
+      const toggle = () => { f.plant = on ? 'ALL' : d.plant; render(); const n = document.querySelector(`.depot[data-p="${d.plant}"]`); if (n) n.focus(); };
+      g.setAttribute('data-p', d.plant);
+      g.onclick = toggle;
+      g.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } };
+      svg.appendChild(g);
+    });
+    $('map').innerHTML = ''; $('map').appendChild(svg);
   }
   function renderBars(id, data, fmt) {
     const max = Math.max(1, ...data.map((d) => d.value));
