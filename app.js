@@ -134,11 +134,6 @@
       return { ...d, dep, x: p.x, y: p.y, col: css(d.plant === 'NBO' ? '--nbo' : '--msa'), k: Math.sqrt(d.amt / max) };
     }).filter(Boolean);
 
-    // extruded body: stacked copies of the outline, pushed down in z
-    let layers = `<div class="layer" style="transform:translateZ(-22px);filter:blur(7px)"><svg viewBox="${vb}" aria-hidden="true"><path d="${G.KENYA_PATH}" fill="#000" opacity=".28"/></svg></div>`;
-    for (let i = 8; i >= 1; i--) {
-      layers += `<div class="layer" style="transform:translateZ(${-i * 2}px)"><svg viewBox="${vb}" aria-hidden="true"><path d="${G.KENYA_PATH}" fill="${i % 2 ? side : edge}"/></svg></div>`;
-    }
     // top surface: land, pulsing heat clipped to the border, depot ripples
     const defs = pts.map((d) => `<radialGradient id="hg-${d.plant}"><stop offset="0" stop-color="${d.col}" stop-opacity=".95"/><stop offset=".45" stop-color="${d.col}" stop-opacity=".45"/><stop offset="1" stop-color="${d.col}" stop-opacity="0"/></radialGradient>`).join('');
     const heat = pts.map((d, i) => `<circle class="heat${i % 2 ? ' b' : ''}" cx="${d.x}" cy="${d.y}" r="${150 + 240 * d.k}" fill="url(#hg-${d.plant})"/>`).join('');
@@ -156,16 +151,16 @@
 
     // depot columns stand up from the plane and double as the filter buttons
     const pillars = pts.map((d) => {
-      const on = f.plant === d.plant, h = Math.round(34 + 86 * d.k);
+      const on = f.plant === d.plant;
       return `<div class="pillar" style="left:${(d.x / W) * 100}%;top:${(d.y / H) * 100}%">
-        <button type="button" class="depot${on ? ' on' : ''}" data-p="${d.plant}" aria-pressed="${on}" style="--c:${d.col};--h:${h}px"
+        <button type="button" class="depot${on ? ' on' : ''}" data-p="${d.plant}" aria-pressed="${on}" style="--c:${d.col}"
           aria-label="${d.dep.name} depot, KES ${fmtM(d.amt)}, ${d.customers} customers. ${on ? 'Selected, press to clear filter' : 'Press to filter'}">
-          <span class="col"></span><span class="cap"><b>KES ${fmtM(d.amt)}</b><small>${d.dep.name} \u00b7 ${d.customers} cust.</small></span>
+          <span class="cap"><b>KES ${fmtM(d.amt)}</b><small>${d.dep.name} \u00b7 ${d.customers} cust.</small></span>
         </button></div>`;
     }).join('');
 
     const box = $('map');
-    box.innerHTML = `<div class="map3d${mapDrawn ? '' : ' in'}"><div class="scene">${layers}${top}${pillars}</div></div>`;
+    box.innerHTML = `<div class="map3d"><div class="scene">${top}${pillars}</div></div>`;
     mapDrawn = true;
     box.querySelectorAll('.depot').forEach((b) => {
       b.onclick = () => {
