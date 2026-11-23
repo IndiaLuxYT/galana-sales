@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f2a44">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Galana">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Galana Sales</title>
+<link rel="icon" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#kpis">Skip to dashboard</a>
+<main>
+  <header>
+    <div>
+      <h1>Galana Sales</h1>
+      <p class="sub" id="period"></p>
+    </div>
+    <div class="actions">
+      <span id="net" class="badge" role="status">Online</span>
+      <button id="theme" class="chip" aria-label="Toggle light or dark theme">Theme</button>
+    </div>
+  </header>
+  <p class="sub" id="sync">Last sync: never (sample data) Â· works offline</p>
+
+  <section class="filters" id="filters" role="group" aria-label="Filters"></section>
+  <div id="status" class="sr" role="status" aria-live="polite"></div>
+  <section class="kpis" id="kpis" tabindex="-1" aria-label="Key figures"></section>
+
+  <div class="grid">
+    <article class="card wide"><h2>Monthly sales</h2><p class="sub">Net amount by depot</p>
+      <div id="trend"></div><div id="trend-legend" class="legend"></div>
+      <details class="data"><summary>View as table</summary><div id="trend-table"></div></details></article>
+    <article class="card"><h2>Kenya depots</h2><p class="sub">Bubble size = sales. Click a depot to filter.</p>
+      <div id="map" class="center"></div></article>
+    <article class="card"><h2>Sales by product</h2><p class="sub">Net amount, KES</p><div id="byProduct"></div></article>
+    <article class="card"><h2>Margin by product</h2><p class="sub">Profit as % of net sales. Costs are assumed sample values.</p><div id="byMargin"></div></article>
+    <article class="card"><h2>B2B vs B2C</h2><p class="sub">Share of net sales</p><div id="byType"></div></article>
+    <article class="card"><h2>Top customers</h2><p class="sub">By net sales</p><div id="top"></div></article>
+  </div>
+
+  <footer class="sub">Sample data for practice. Costs, profit and margin are assumed, not real Galana figures.</footer>
+</main>
+<script src="data.js"></script>
+<script src="geo.js"></script>
+<script src="app.js"></script>
+<script>
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+</script>
+</body>
+</html>
